@@ -65,9 +65,7 @@ void update_READY(std::vector<Process> &procs, int t, std::vector<Process> &READ
 void FCFS(std::vector<Process> &procs) {
     int t = 0;                  // simulated time
     int n = procs.size(); // number of process to simulate
-    
-    int nextInput = 0;      // index of first job not in readyQueue
-    
+        
     std::vector<Process> READY;      // queue of ready jobs
     std::vector<Process> RUNNING;    // queue of running jobs
     std::vector<Process> BLOCKED;    //queue of io jobs
