@@ -65,7 +65,7 @@ void update_READY(std::vector<Process> &procs, int t, std::vector<Process> &READ
 void FCFS(std::vector<Process> &procs) {
     int t = 0;                  // simulated time
     int n = procs.size(); // number of process to simulate
-        
+    
     std::vector<Process> READY;      // queue of ready jobs
     std::vector<Process> RUNNING;    // queue of running jobs
     std::vector<Process> BLOCKED;    //queue of io jobs
@@ -76,7 +76,7 @@ void FCFS(std::vector<Process> &procs) {
     }
     
     
-    std::cout << "time " << t << "ms: " << "Start of simulation" << " [Q " << std::endl;//add Queue contents here
+    std::cout << "time " << t << "ms: " << "Start of simulation" << std::endl;//add Queue contents here
 
     // schedule jobs until no more input and ready queue is empty
     bool isStart = true;
@@ -149,15 +149,7 @@ void FCFS(std::vector<Process> &procs) {
 
             
         }
-        // otherwise increment time and try again
-        /*
-        else {
-         
-            t = procs[nextInput].ini_arr_t;
-        }
-         */
     }
-    
 }
 
 void read_lines(std::vector<std::string> & proc, std::ifstream & in_str) {
