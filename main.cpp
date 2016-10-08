@@ -96,22 +96,22 @@ void FCFS(std::vector<Process> &procs) {
             READY.erase(READY.begin());
             
             update_READY(procs,t,READY);
-            std::cout << "time " << t << "ms: " <<RUNNING[0].proc_id.c_str() << "Process starts using the CPU" << " [Q ";
+            std::cout << "time " << t << "ms: " <<RUNNING[0].proc_id.c_str() << " Process starts using the CPU" << " [Q ";
             for (int a = 0; a < READY.size(); a++){
                 std::cout<< READY[a].proc_id;
             }
-            std::cout<<std::endl;
+            std::cout<<"]"<<std::endl;
             RUNNING[0].start = t;
             
             t += RUNNING[0].burst_t;
             RUNNING[0].end = t;
             
             update_READY(procs,t,READY);
-            std::cout << "time " << t << "ms: " <<RUNNING[0].proc_id.c_str() << "Process finishes using the CPU" << " [Q ";
+            std::cout << "time " << t << "ms: " <<RUNNING[0].proc_id.c_str() << " Process finishes using the CPU" << " [Q ";
             for (int a = 0; a < READY.size(); a++){
                 std::cout<< READY[a].proc_id;
             }
-            std::cout<<std::endl;
+            std::cout<<"]"<<std::endl;
             
             RUNNING[0].turnaround = RUNNING[0].end - RUNNING[0].ini_arr_t;
             //this process ran a burst
@@ -130,22 +130,22 @@ void FCFS(std::vector<Process> &procs) {
             RUNNING.erase(RUNNING.begin());
             
             update_READY(procs,t,READY);
-            std::cout << "time " << t << "ms: " <<BLOCKED[0].proc_id.c_str() << "Process starts performing I/O" << " [Q ";
+            std::cout << "time " << t << "ms: " <<BLOCKED[0].proc_id.c_str() << " Process starts performing I/O" << " [Q ";
             for (int a = 0; a < READY.size(); a++){
                 std::cout<< READY[a].proc_id;
             }
-            std::cout<<std::endl;
+            std::cout<<"]"<<std::endl;
 
             BLOCKED[0].curr_arr_t = t + BLOCKED[0].io_t; // this process goes to io
             
             procs.push_back(BLOCKED[0]);
             
             update_READY(procs,BLOCKED[0].curr_arr_t,READY);
-            std::cout << "time " << BLOCKED[0].curr_arr_t << "ms: " <<BLOCKED[0].proc_id.c_str() << "Process finishes performing I/O" << " [Q ";
+            std::cout << "time " << BLOCKED[0].curr_arr_t << "ms: " <<BLOCKED[0].proc_id.c_str() << " Process finishes performing I/O" << " [Q ";
             for (int a = 0; a < READY.size(); a++){
                 std::cout<< READY[a].proc_id;
             }
-            std::cout<<std::endl;
+            std::cout<<"]"<<std::endl;
             BLOCKED.erase(BLOCKED.begin());
             
 
