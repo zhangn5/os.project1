@@ -30,6 +30,7 @@ public:
     int turnaround;
 };
 
+//check if a process ID is already in the process vector(queue)
 bool not_in(Process proc, std::vector<Process> procs){
     bool not_in = true;
     for (int i = 0; i < procs.size(); i++){
@@ -40,6 +41,7 @@ bool not_in(Process proc, std::vector<Process> procs){
     return not_in;
 }
 
+//sum up the left burst times of every job in process vector
 int sum_numleft(std::vector<Process> procs){
     int sum=0;
     for (int i = 0; i < procs.size(); i++){
@@ -48,10 +50,12 @@ int sum_numleft(std::vector<Process> procs){
     return sum;
 }
 
+//sort the processes with arrival time and if the arrival timeis the same, sort with ID in alphabetical order
 bool FCFS_sort(Process proc1, Process proc2){
     return proc1.curr_arr_t < proc2.curr_arr_t || (proc1.curr_arr_t == proc2.curr_arr_t && proc1.proc_id[0] < proc2.proc_id[0]) ;
 }
 
+//Update ready queue content with current time
 void update_READY(std::vector<Process> &procs, int t, std::vector<Process> &READY){
     std::sort(procs.begin(),procs.end(),FCFS_sort);
     for(std::vector<Process>::iterator itr = procs.begin(); itr != procs.end(); itr++){
@@ -62,6 +66,7 @@ void update_READY(std::vector<Process> &procs, int t, std::vector<Process> &READ
     }
 }
 
+//FCFS(first come first serve)
 void FCFS(std::vector<Process> &procs) {
     int t = 0;                  // simulated time
     int n = procs.size(); // number of process to simulate
@@ -69,16 +74,16 @@ void FCFS(std::vector<Process> &procs) {
     std::vector<Process> READY;      // queue of ready jobs
     std::vector<Process> RUNNING;    // queue of running jobs
     std::vector<Process> BLOCKED;    //queue of io jobs
+    
     //initialize the member variables
     for(int i = 0; i< procs.size(); i++){
         procs[i].curr_arr_t  = procs[i].ini_arr_t;
         procs[i].num_Left = procs[i].num_bursts;
     }
     
-    
     std::cout << "time " << t << "ms: " << "Start of simulation" << std::endl;//add Queue contents here
 
-    // schedule jobs until no more input and ready queue is empty
+    // schedule jobs until no more left jobs and ready queue is empty
     bool isStart = true;
     
     while (isStart == true || (READY.size() > 0)|| sum_numleft(procs) > 0){
@@ -86,7 +91,6 @@ void FCFS(std::vector<Process> &procs) {
         // add jobs with arrival times <= current time to ready queue
         update_READY(procs,t,READY);
 
-        
         // if there's anything ready, schedule it
         if (READY.size() > 0) {
             //enter running queue
@@ -112,17 +116,16 @@ void FCFS(std::vector<Process> &procs) {
             std::cout<<"]"<<std::endl;
             
             RUNNING[0].turnaround = RUNNING[0].end - RUNNING[0].ini_arr_t;
+            
             //this process ran a burst
             RUNNING[0].num_Left --;
             
             if(sum_numleft(READY) == 0){
-                std::cout << RUNNING[0].proc_id <<" Process terminates(by finishing its lst CPU burst)"<<std::endl<<"End of simulation"<<std::endl;
+                std::cout << RUNNING[0].proc_id <<" Process terminates(by finishing its last CPU burst)"<<std::endl<<"End of simulation"<<std::endl;
                 break;
                 
             }
-            //procs.pop_back();
             
-            //RUNNING[0].curr_arr_t += t;
             //enter blocked io queue
             BLOCKED.push_back(RUNNING[0]);
             RUNNING.erase(RUNNING.begin());
@@ -145,8 +148,6 @@ void FCFS(std::vector<Process> &procs) {
             }
             std::cout<<"]"<<std::endl;
             BLOCKED.erase(BLOCKED.begin());
-            
-
             
         }
     }
