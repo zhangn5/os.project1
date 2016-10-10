@@ -67,9 +67,9 @@ void update_READY(std::vector<Process> &procs, int t, std::vector<Process> &READ
 }
 
 //FCFS(first come first serve)
-void FCFS(std::vector<Process> &procs) {
+void FCFS(std::vector<Process> &procs, int t_cs) {
     int t = 0;                  // simulated time
-    int n = procs.size(); // number of process to simulate
+    int num_cs = 0;                 //number of context switches
     
     std::vector<Process> READY;      // queue of ready jobs
     std::vector<Process> RUNNING;    // queue of running jobs
@@ -153,6 +153,7 @@ void FCFS(std::vector<Process> &procs) {
     }
 }
 
+//skip the lines with #, push back the other lines into the vector of string
 void read_lines(std::vector<std::string> & proc, std::ifstream & in_str) {
     std::string line;
     while (getline(in_str, line)) {
@@ -161,6 +162,7 @@ void read_lines(std::vector<std::string> & proc, std::ifstream & in_str) {
     }
 }
 
+// function to store splitted information of the processes
 std::vector<std::string> split(std::string str){
     std::string::size_type pos;
     std::vector<std::string> result;
@@ -195,6 +197,14 @@ int main(int argc, const char * argv[]) {
     std::vector<std::string> procs;
     read_lines(procs, in_str);
     in_str.close();
+    
+    //open the output.txt file to write
+    std::string output_file(argv[2]);
+    std::ofstream out_str(output_file);
+    if (!out_str.good()){
+        std::cerr <<"Can't open " <<argv[2]<<" to write.\n";
+        return 1;
+    }
 
     //split the words with "|"
     std::vector<Process> p_container;
@@ -208,19 +218,20 @@ int main(int argc, const char * argv[]) {
         p.io_t = std::atoi(a[4].c_str());
         p_container.push_back(p);
     }
-    FCFS(p_container);
+    
+    int t_cs = 8;
+    int n = p_container.size(); // number of process to simulate
+    
+    FCFS(p_container,t_cs);
+    
+    
     
     
     //check the output file
-    /*
-    std::string output_file(argv[2]);
-    std::ofstream out_str(output_file);
-    if (!out_str.good()){
-        std::cerr <<"Can't open " <<argv[2]<<" to write.\n";
-        return 1;
-    }
     
-    */
+
+    
+    
     return 0;
 
 }
