@@ -8,8 +8,7 @@ int main(int argc, const char * argv[]) {
         return 1;
     }
     
-    std::string input_file(argv[1]);
-    std::ifstream in_str(input_file);
+    std::ifstream in_str(argv[1]);
     if (!in_str.good()) {
         std::cerr << "Can not open " <<argv[1] << " to read.\n";
         return 1;

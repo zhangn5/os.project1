@@ -30,6 +30,9 @@ bool Process::read(std::ifstream& in_str) {
        	burst_t = std::atoi(a[2].c_str());
        	num_bursts = std::atoi(a[3].c_str());
        	io_t = std::atoi(a[4].c_str());
+
+        curr_arr_t = ini_arr_t;
+        num_left = num_bursts;
        	return true;
 	}
 	return false;
@@ -43,111 +46,76 @@ bool OS::FCFS_sort(const Process& p, const Process& q) {
 	return (p.curr_arr_t < q.curr_arr_t || (p.curr_arr_t == q.curr_arr_t && p.proc_id < q.proc_id));
 }
 
-//check if a process ID is already in the process vector(queue)
-bool OS::not_in_READY(const Process& proc){
-    bool not_in = true;
-    for (int i = 0; i < READY.size(); i++){
-        if(READY[i].proc_id == proc.proc_id){
-            not_in = false;
-        }
-    }
-    return not_in;
-}
-
 //Update ready queue content with current time
 void OS::FCFS_update_READY(int t) {
     std::sort(procs.begin(), procs.end(), FCFS_sort);
-    for(std::vector<Process>::iterator itr = procs.begin(); itr != procs.end(); itr++){
-        if(itr->curr_arr_t <= t && itr->num_Left > 0 && not_in_READY(*itr)){
-            READY.push_back(*itr);
-            itr = --(procs.erase(itr));
+    for (int i = 0; i < procs.size(); ++i) {
+        if (procs[i].curr_arr_t <= t && procs[i].num_left > 0 \
+            && std::find(READY.begin(), READY.end(), &procs[i]) == READY.end()) {
+            READY.push_back(&procs[i]);
         }
     }
 }
 
-//sum up the left burst times of every job in process vector
-int OS::sum_numleft(const std::vector<Process>& processes){
-    int sum=0;
-    for (int i = 0; i < processes.size(); i++){
-        sum += processes[i].num_Left;
+void OS::print_READY(int t, const std::string& message) {
+    std::cout << "time " << t << "ms: " << message << " [Q ";
+    for (std::list<Process*>::const_iterator itr = READY.begin(); itr != READY.end(); ++itr) {
+        std::cout << (*itr)->proc_id;
     }
-    return sum;
+    std::cout<< "]" <<std::endl;
 }
 
 void OS::FCFS() {
-	int t = 0;                  // simulated time
-    //initialize the member variables
-    for(int i = 0; i< procs.size(); i++){
-        procs[i].curr_arr_t  = procs[i].ini_arr_t;
-        procs[i].num_Left = procs[i].num_bursts;
-    }
+	int t = 0; // CPU time
     std::cout << "time " << t << "ms: " << "Start of simulation" << std::endl;//add Queue contents here
-
-    // schedule jobs until no more left jobs and ready queue is empty
-    bool isStart = true;
-    
-    while (isStart == true || (READY.size() > 0)|| sum_numleft(procs) > 0){
-        isStart = false;
+    // schedule jobs until no more left jobs and ready queue is empty 
+    do {
         // add jobs with arrival times <= current time to ready queue
         FCFS_update_READY(t);
-
-        // if there's anything ready, schedule it
-        if (READY.size() > 0) {
-            //enter running queue
-            RUNNING.push_back(READY[0]);
+        if (!READY.empty()) {
+            Process* current = *READY.begin();
             READY.erase(READY.begin());
-            
-            FCFS_update_READY(t);
-            std::cout << "time " << t << "ms: " <<RUNNING[0].proc_id.c_str() << " Process starts using the CPU" << " [Q ";
-            for (int a = 0; a < READY.size(); a++){
-                std::cout<< READY[a].proc_id;
-            }
-            std::cout<<"]"<<std::endl;
-            RUNNING[0].start = t;
-            
-            t += RUNNING[0].burst_t;
-            RUNNING[0].end = t;
-            
-            FCFS_update_READY(t);
-            std::cout << "time " << t << "ms: " <<RUNNING[0].proc_id.c_str() << " Process finishes using the CPU" << " [Q ";
-            for (int a = 0; a < READY.size(); a++){
-                std::cout<< READY[a].proc_id;
-            }
-            std::cout<<"]"<<std::endl;
-            
-            RUNNING[0].turnaround = RUNNING[0].end - RUNNING[0].ini_arr_t;
-            
-            //this process ran a burst
-            RUNNING[0].num_Left --;
-            
-            if(sum_numleft(READY) == 0){
-                std::cout << RUNNING[0].proc_id <<" Process terminates(by finishing its last CPU burst)"<<std::endl<<"End of simulation"<<std::endl;
-                break;
-            }
-            
-            //enter blocked io queue
-            BLOCKED.push_back(RUNNING[0]);
-            RUNNING.erase(RUNNING.begin());
-            
-            FCFS_update_READY(t);
-            std::cout << "time " << t << "ms: " <<BLOCKED[0].proc_id.c_str() << " Process starts performing I/O" << " [Q ";
-            for (int a = 0; a < READY.size(); a++){
-                std::cout<< READY[a].proc_id;
-            }
-            std::cout<<"]"<<std::endl;
+            RUNNING = current;
+            print_READY(t, current->proc_id + " Process starts using the CPU");
 
-            BLOCKED[0].curr_arr_t = t + BLOCKED[0].io_t; // this process goes to io
-            
-            procs.push_back(BLOCKED[0]);
-            
-            FCFS_update_READY(BLOCKED[0].curr_arr_t);
-            std::cout << "time " << BLOCKED[0].curr_arr_t << "ms: " <<BLOCKED[0].proc_id.c_str() << " Process finishes performing I/O" << " [Q ";
-            for (int a = 0; a < READY.size(); a++){
-                std::cout<< READY[a].proc_id;
+            // before increase the time, check if any I/O job is finished
+            std::list<Process*>::iterator itr = BLOCKED.begin();
+            while (itr != BLOCKED.end()) {
+                if (t + current->burst_t >= (*itr)->curr_arr_t) {
+                    print_READY(t+current->io_t, current->proc_id + " Process finishes performing I/O");
+                    itr = BLOCKED.erase(itr);
+                } else {
+                    itr++;
+                }
             }
-            std::cout<<"]"<<std::endl;
-            BLOCKED.erase(BLOCKED.begin());
-            
+
+            t += current->burst_t;
+            RUNNING = NULL; // finish running
+            (current->num_left)--;
+            current->curr_arr_t = t;
+            FCFS_update_READY(t); // After a running job finishes, the READY queue should be updated
+            print_READY(t, current->proc_id + " Process finishes using the CPU");
+            if (current->num_left == 0) {
+                std::cout << current->proc_id << " Process terminates(by finishing its last CPU burst)" << std::endl;
+            }
+
+            // Process enters BLOCKED if it needs to
+            if (current->io_t) {
+                print_READY(t, current->proc_id + " Process starts performing I/O");
+                BLOCKED.push_back(current);
+                current->curr_arr_t += current->io_t;
+            }
+        } else if (!BLOCKED.empty()) {
+            std::list<Process*>::iterator itr = BLOCKED.begin();
+            while (itr != BLOCKED.end()) {
+                print_READY((*itr)->curr_arr_t, (*itr)->proc_id + " Process finishes performing I/O");
+                itr = BLOCKED.erase(itr);
+            }
         }
-    }
+    } while (!READY.empty() || !BLOCKED.empty());
+    std::cout << "End of simulation" <<std::endl;
 }
+
+
+
+

@@ -1,5 +1,6 @@
 #include <string>
 #include <vector>
+#include <list>
 #include <fstream>
 
 class Process {
@@ -12,31 +13,28 @@ public:
     //above gets from the file
     
     int curr_arr_t; //current_arrive_time
-    int start;
-    int end;
-    int num_Left;
+    int num_left;
     int turnaround;
 
     bool read(std::ifstream & in_str);
 	void print();
-
-	//friend bool operator< (const Process& p, const Process& q);
 private:
 	std::vector<std::string> split(std::string str); // helper function used by read
 };
 
 class OS {
 private:
-    std::vector<Process> READY;      // queue of ready jobs
-    std::vector<Process> RUNNING;    // queue of running jobs
-    std::vector<Process> BLOCKED;    //queue of io jobs
+    std::list<Process*> READY;      // queue of ready jobs
+    Process* RUNNING;               // the running job, currently there is only 1
+    std::list<Process*> BLOCKED;    // queue of io jobs
     std::vector<Process> procs;
+    int m;
 public:
-	OS(const std::vector<Process>& processes) : procs(processes) {}; // constructor
+	OS(const std::vector<Process>& processes, const int nprocs = 1) : \
+        RUNNING(NULL), procs(processes), m(nprocs) {}; // constructor
+    void print_READY(int t, const std::string& message);
 	// FCFS
 	static bool FCFS_sort(const Process& p, const Process& q);
-	static int sum_numleft(const std::vector<Process>& processes);
 	void FCFS_update_READY(int t);
-	bool not_in_READY(const Process& proc);
 	void FCFS();
 };
