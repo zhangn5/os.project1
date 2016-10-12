@@ -28,13 +28,16 @@ private:
     Process* RUNNING;               // the running job, currently there is only 1
     std::list<Process*> BLOCKED;    // queue of io jobs
     std::vector<Process> procs;
+
     int m;
+    int ts;
+    static bool FCFS_sort(Process* p, Process* q);
 public:
-	OS(const std::vector<Process>& processes, const int nprocs = 1) : \
-        RUNNING(NULL), procs(processes), m(nprocs) {}; // constructor
+	OS(const std::vector<Process>& processes, const int nprocs = 1, const int time_switch = 8) : \
+        RUNNING(NULL), procs(processes), m(nprocs), ts(time_switch) {}; // constructor
     void print_READY(int t, const std::string& message);
 	// FCFS
-	static bool FCFS_sort(const Process& p, const Process& q);
 	void FCFS_update_READY(int t);
+    void FCFS_clear_BLOCKED();
 	void FCFS();
 };
