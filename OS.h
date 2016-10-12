@@ -38,6 +38,5 @@ public:
     void print_READY(int t, const std::string& message);
 	// FCFS
 	void FCFS_update_READY(int t);
-    void FCFS_clear_BLOCKED();
 	void FCFS();
 };

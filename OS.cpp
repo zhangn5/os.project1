@@ -60,17 +60,6 @@ void OS::FCFS_update_READY(int t) {
     READY.insert(READY.end(), ready_processes.begin(), ready_processes.end());
 }
 
-void OS::FCFS_clear_BLOCKED() {
-    BLOCKED.sort(FCFS_sort);
-    std::list<Process*>::iterator itr = BLOCKED.begin();
-    while (itr != BLOCKED.end()) {
-        Process* tmp = *itr;
-        itr = BLOCKED.erase(itr);
-        FCFS_update_READY(tmp->curr_arr_t);
-        print_READY(tmp->curr_arr_t, tmp->proc_id + " Process finishes performing I/O");
-    }
-}
-
 void OS::print_READY(int t, const std::string& message) {
     std::cout << "time " << t << " ms: " << message << " [Q ";
     for (std::list<Process*>::const_iterator itr = READY.begin(); itr != READY.end(); ++itr) {
@@ -94,7 +83,7 @@ void OS::FCFS() {
         if (!READY.empty()) {
             Process* current = *READY.begin();
             READY.erase(READY.begin());
-            t += ts/2;
+            t += ts/2; // switch in
             RUNNING = current;
             print_READY(t, current->proc_id + " Process starts using the CPU");
 
@@ -116,7 +105,7 @@ void OS::FCFS() {
 
             FCFS_update_READY(t); // After a running job finishes, the READY queue should be updated
             print_READY(t, current->proc_id + " Process finishes using the CPU");
-            t += ts/2;
+            t += ts/2; // switch out
             RUNNING = NULL; // finish running
 
             if (current->num_left == 0) {
@@ -130,7 +119,12 @@ void OS::FCFS() {
                 current->curr_arr_t = (t + current->io_t - ts/2);
             }
         } else if (!BLOCKED.empty()) {
-            FCFS_clear_BLOCKED();
+            BLOCKED.sort(FCFS_sort);
+            Process* tmp = *BLOCKED.begin();
+            BLOCKED.erase(BLOCKED.begin());
+            FCFS_update_READY(tmp->curr_arr_t);
+            print_READY(tmp->curr_arr_t, tmp->proc_id + " Process finishes performing I/O");
+            t = tmp->curr_arr_t;
         }
     } while (!READY.empty() || !BLOCKED.empty());
     std::cout << "End of simulation" <<std::endl;
