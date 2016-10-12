@@ -68,14 +68,19 @@ void OS::print_READY(int t, const std::string& message) {
     std::cout<< "]" <<std::endl;
 }
 
-void OS::FCFS() {
-    // echo the procs
-    for (std::vector<Process>::iterator itr = procs.begin(); itr != procs.end(); ++itr) {
-        itr->print();
+bool OS::FCFS_all_done() {
+    for (int i = 0; i < procs.size(); ++i) {
+        if (procs[i].num_left != 0) {
+            return false;
+        }
     }
+    return true;
+}
 
+void OS::FCFS() {
 	int t = 0; // CPU time
-    std::cout << "time " << t << "ms: " << "Start of simulation" << std::endl;//add Queue contents here
+    FCFS_update_READY(t);
+    print_READY(t, "Start of simulation");
     // schedule jobs until no more left jobs and ready queue is empty 
     do {
         // add jobs with arrival times <= current time to ready queue
@@ -105,7 +110,8 @@ void OS::FCFS() {
 
             FCFS_update_READY(t); // After a running job finishes, the READY queue should be updated
             print_READY(t, current->proc_id + " Process finishes using the CPU");
-            t += ts/2; // switch out
+            if (!FCFS_all_done())
+                t += ts/2; // switch out
             RUNNING = NULL; // finish running
 
             if (current->num_left == 0) {
@@ -127,7 +133,7 @@ void OS::FCFS() {
             t = tmp->curr_arr_t;
         }
     } while (!READY.empty() || !BLOCKED.empty());
-    std::cout << "End of simulation" <<std::endl;
+    print_READY(t, "End of simulation");
 }
 
 

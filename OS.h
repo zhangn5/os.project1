@@ -39,4 +39,5 @@ public:
 	// FCFS
 	void FCFS_update_READY(int t);
 	void FCFS();
+    bool FCFS_all_done();
 };
