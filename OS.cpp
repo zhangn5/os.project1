@@ -139,7 +139,7 @@ void OS::FCFS_SJF(bool (*sort_procs_)(Process*, Process*)) {
             BLOCKED.sort(FCFS_sort);
             Process* tmp = *BLOCKED.begin();
             BLOCKED.erase(BLOCKED.begin());
-            FCFS_SJF_update_READY(tmp->curr_arr_t, sort_procs_);
+            FCFS_SJF_update_READY(tmp->curr_arr_t, FCFS_sort);
             print_READY(tmp->curr_arr_t, tmp->proc_id + " Process finishes performing I/O");
             t = tmp->curr_arr_t;
         }
