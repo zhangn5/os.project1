@@ -27,7 +27,8 @@ int main(int argc, const char * argv[]) {
     in_str.close();
 
     OS myos(p_container);
-    myos.FCFS();
+    myos.FCFS_SJF(OS::FCFS_sort);
+    myos.FCFS_SJF(OS::SJF_sort);
 
     return 0;
 }

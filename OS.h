@@ -14,10 +14,10 @@ public:
     
     int curr_arr_t; //current_arrive_time
     int num_left;
-    int turnaround;
-
+    std::vector <int> turnaround;
+    std::vector <int> waittime;
     bool read(std::ifstream & in_str);
-	void print();
+    void print();
 private:
 	std::vector<std::string> split(std::string str); // helper function used by read
 };
@@ -28,16 +28,23 @@ private:
     Process* RUNNING;               // the running job, currently there is only 1
     std::list<Process*> BLOCKED;    // queue of io jobs
     std::vector<Process> procs;
-
+    int num_cs;
+    int num_pe;
     int m;
     int ts;
-    static bool FCFS_sort(Process* p, Process* q);
+    int sum_turn;
+    int sum_wait;
+    int sum_burst_t;
+    void report_result();
+    void reset();
 public:
-	OS(const std::vector<Process>& processes, const int nprocs = 1, const int time_switch = 8) : \
-        RUNNING(NULL), procs(processes), m(nprocs), ts(time_switch) {}; // constructor
+    static bool FCFS_sort(Process* p, Process* q);
+    static bool SJF_sort(Process* p, Process* q);
+    OS(const std::vector<Process>& processes, const int nprocs = 1, const int time_switch = 8) : \
+    RUNNING(NULL), procs(processes), m(nprocs), ts(time_switch) {}; // constructor
     void print_READY(int t, const std::string& message);
-	// FCFS
-	void FCFS_update_READY(int t);
-	void FCFS();
-    bool FCFS_all_done();
+    // FCFS
+    void FCFS_SJF_update_READY(int t, bool (*sort_procs)(Process* p, Process* q));
+    void FCFS_SJF(bool (*sort_procs)(Process* p, Process* q));
+    bool FCFS_SJF_all_done();
 };
