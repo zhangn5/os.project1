@@ -27,9 +27,22 @@ int main(int argc, const char * argv[]) {
     in_str.close();
 
     OS myos(p_container, 1, 8);
+
+    std::cout << "time 0ms: Simulator started for FCFS [Q empty]" << std::endl;
     myos.FCFS_SJF(OS::FCFS_sort);
+    std::cout << "FCFS" << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "time 0ms: Simulator started for SJF [Q empty]" << std::endl;
     myos.FCFS_SJF(OS::SJF_sort);
+    std::cout << "SJF" << std::endl;
+    std::cout << std::endl;
+
+
+
     OS myos2(p_container,1, 8, 84);
+    std::cout << "time 0ms: Simulator started for RR [Q empty]" << std::endl;
     myos2.FCFS_SJF(OS::FCFS_sort);
+    std::cout << "RR" << std::endl;
     return 0;
 }
