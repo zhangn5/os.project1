@@ -152,7 +152,7 @@ void OS::FCFS_SJF(bool (*sort_procs_)(Process*, Process*)) {
 		FCFS_SJF_update_READY(t, sort_procs_);
 		if (!READY.empty()){
 		    READY.push_back(current);
-            	    print_READY(t,"Time slice expired: process " + current->proc_id + \
+            	    print_READY(t,"Time slice expired; process " + current->proc_id + \
 			" preempted with " + std::to_string(current->burst_left) + "ms to go" );
 		    break;
 		} else {
