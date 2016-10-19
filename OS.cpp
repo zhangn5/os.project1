@@ -32,6 +32,7 @@ bool Process::read(std::ifstream& in_str) {
 
         curr_arr_t = ini_arr_t;
         num_left = num_bursts;
+	burst_left = burst_t;
        	return true;
 	}
 	return false;
@@ -40,6 +41,18 @@ bool Process::read(std::ifstream& in_str) {
 void Process::print() {
 	std::cout << proc_id << '|' << ini_arr_t << '|' << burst_t << '|' << num_bursts << '|' << io_t << std::endl;
 }
+
+OS::OS(const std::vector<Process>& processes, const int nprocs , const int time_switch)
+{
+	RUNNING = NULL;
+	procs = processes;
+	m = nprocs;
+	ts = time_switch;
+	time_slice = 100000;
+	for (unsigned int i = 0; i< procs.size(); ++i) {
+	    time_slice = procs[i].burst_t > time_slice ? procs[i].burst_t : time_slice;
+	}
+}; // constructor for FCFS and SJF
 
 bool OS::FCFS_sort(Process* p, Process* q) {
 	return (p->curr_arr_t < q->curr_arr_t || (p->curr_arr_t == q->curr_arr_t && p->proc_id < q->proc_id));
@@ -104,7 +117,7 @@ void OS::FCFS_SJF(bool (*sort_procs_)(Process*, Process*)) {
             // before increase the time, check if any I/O job is finished
             std::list<Process*>::iterator itr = BLOCKED.begin();
             while (itr != BLOCKED.end()) {
-                if (t + current->burst_t >= (*itr)->curr_arr_t) {
+                if (t + ( current->burst_left < time_slice ? current->burst_left : time_slice ) >= (*itr)->curr_arr_t) {
                     FCFS_SJF_update_READY((*itr)->curr_arr_t, sort_procs_);
                     print_READY((*itr)->curr_arr_t, (*itr)->proc_id + " Process finishes performing I/O");
                     itr = BLOCKED.erase(itr);
@@ -112,24 +125,56 @@ void OS::FCFS_SJF(bool (*sort_procs_)(Process*, Process*)) {
                     itr++;
                 }
             }
-            t += current->burst_t;
-            (current->num_left)--;
-	    int end_turn = t;
-	    current->turnaround.push_back(end_turn - start);
-            current->curr_arr_t = t + ts/2;
 
+	    bool preempt = current->burst_left > time_slice;
+	    while (preempt){
+		if (!READY.empty()){
+		    t += time_slice;
+		    current->burst_left -= time_slice;
+            	    print_READY(t,"Time slice expired: Proccess " + current->proc_id + \
+			" preempted with " + std::to_string(current->burst_left) + " to go" );
+		    break;
+		}
+		while (READY.empty() && preempt) {
+		    t += time_slice;
+		    current->burst_left -= time_slice;
+		    print_READY(t, "Time slice expired: no preemption because ready queue is empty");
+		    FCFS_SJF_update_READY(t, sort_procs_);
+            	    std::list<Process*>::iterator itr = BLOCKED.begin();
+            	    while (itr != BLOCKED.end()) {
+                	if (t + ( current->burst_left < time_slice ? current->burst_left : time_slice ) >= (*itr)->curr_arr_t) {
+                    	    FCFS_SJF_update_READY((*itr)->curr_arr_t, sort_procs_);
+                    	    print_READY((*itr)->curr_arr_t, (*itr)->proc_id + " Process finishes performing I/O");
+                    	    itr = BLOCKED.erase(itr);
+                	} else {
+                    	    itr++;
+                	}
+            	    }
+		    preempt = current->burst_left > time_slice;
+		} 
+	    }
+
+	    if (!preempt) {
+            	t += current->burst_left;
+            	(current->num_left)--;
+	   	int end_turn = t;
+	    	current->turnaround.push_back(end_turn - start);
+            	print_READY(t, "Process " + current->proc_id + " completed a CPU burst");
+		current->burst_left = current->burst_t;
+	    }
+
+            current->curr_arr_t = t + ts/2;
             FCFS_SJF_update_READY(t, sort_procs_); // After a running job finishes, the READY queue should be updated
-            print_READY(t, current->proc_id + " Process finishes using the CPU");
             if (!FCFS_SJF_all_done())
                 t += ts/2; // switch out
             RUNNING = NULL; // finish running
 
             if (current->num_left == 0) {
-                print_READY(t, current->proc_id + " Process terminates (by finishing its last CPU burst)");
+                print_READY(t, "Process " + current->proc_id + " terminates (by finishing its last CPU burst)");
             }
 
             // Process enters BLOCKED if it needs to
-            if (current->num_left > 0 && current->io_t > 0) {
+            if (current->num_left > 0 && current->io_t > 0 && !preempt) {
                 print_READY(t, current->proc_id + " Process starts performing I/O");
                 BLOCKED.push_back(current);
                 current->curr_arr_t = (t + current->io_t - ts/2);
@@ -176,5 +221,6 @@ void OS::reset() {
 	procs[i].num_left = procs[i].num_bursts;
 	procs[i].turnaround.clear();
 	procs[i].waittime.clear();
+	procs[i].burst_left = procs[i].burst_t;
     }
 }

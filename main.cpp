@@ -26,9 +26,10 @@ int main(int argc, const char * argv[]) {
     }
     in_str.close();
 
-    OS myos(p_container);
+    OS myos(p_container, 1, 8);
     myos.FCFS_SJF(OS::FCFS_sort);
     myos.FCFS_SJF(OS::SJF_sort);
-
+    OS myos2(p_container,1, 8, 84);
+    myos2.FCFS_SJF(OS::FCFS_sort);
     return 0;
 }

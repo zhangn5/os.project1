@@ -13,6 +13,7 @@ public:
     //above gets from the file
     
     int curr_arr_t; //current_arrive_time
+    int burst_left;
     int num_left;
     std::vector <int> turnaround;
     std::vector <int> waittime;
@@ -35,13 +36,16 @@ private:
     int sum_turn;
     int sum_wait;
     int sum_burst_t;
+    int time_slice;
     void report_result();
     void reset();
 public:
     static bool FCFS_sort(Process* p, Process* q);
     static bool SJF_sort(Process* p, Process* q);
-    OS(const std::vector<Process>& processes, const int nprocs = 1, const int time_switch = 8) : \
-    RUNNING(NULL), procs(processes), m(nprocs), ts(time_switch) {}; // constructor
+    OS(const std::vector<Process>& processes, const int nprocs , const int time_switch, const int time_slice_ ) : \
+    RUNNING(NULL), procs(processes), m(nprocs), ts(time_switch), time_slice(time_slice_) {}; // constructor for RR
+
+    OS(const std::vector<Process>& processes, const int nprocs , const int time_switch );// constructor for FCFS and SJF
     void print_READY(int t, const std::string& message);
     // FCFS
     void FCFS_SJF_update_READY(int t, bool (*sort_procs)(Process* p, Process* q));
