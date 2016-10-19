@@ -135,7 +135,6 @@ void OS::FCFS_SJF(bool (*sort_procs_)(Process*, Process*)) {
                 current->curr_arr_t = (t + current->io_t - ts/2);
             }
         } else if (!BLOCKED.empty()) {
-	    ++num_cs;
             BLOCKED.sort(FCFS_sort);
             Process* tmp = *BLOCKED.begin();
             BLOCKED.erase(BLOCKED.begin());
@@ -175,5 +174,7 @@ void OS::reset() {
     for (unsigned int i = 0; i < procs.size(); ++i) {
 	procs[i].curr_arr_t = procs[i].ini_arr_t;
 	procs[i].num_left = procs[i].num_bursts;
+	procs[i].turnaround.clear();
+	procs[i].waittime.clear();
     }
 }
