@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <algorithm>
+#include <ios>
 
 std::vector<std::string> Process::split(std::string str) {
     std::vector<std::string> result;
@@ -44,11 +45,10 @@ void Process::print() {
 
 OS::OS(const std::vector<Process>& processes, const int nprocs , const int time_switch)
 {
-	RUNNING = NULL;
 	procs = processes;
 	m = nprocs;
 	ts = time_switch;
-	time_slice = 100000;
+	time_slice = 0;
 	for (unsigned int i = 0; i< procs.size(); ++i) {
 	    time_slice = procs[i].burst_t > time_slice ? procs[i].burst_t : time_slice;
 	}
@@ -67,7 +67,8 @@ void OS::FCFS_SJF_update_READY(int t, bool (*sort_procs)(Process*, Process*)) {
     std::vector<Process*> ready_processes;//newly inserted process
     for (unsigned int i = 0; i < procs.size(); ++i) {
         if (procs[i].curr_arr_t <= t && procs[i].num_left > 0 \
-            && std::find(READY.begin(), READY.end(), &procs[i]) == READY.end() && &procs[i] != RUNNING) {
+            && std::find(READY.begin(), READY.end(), &procs[i]) == READY.end() && \
+		std::find(RUNNING.begin(), RUNNING.end(), &procs[i])== RUNNING.end()) {
             ready_processes.push_back(&procs[i]);
         }
     }
@@ -120,9 +121,9 @@ void OS::check_io(int t_, Process* current_, bool (*sort_procs_)(Process* p, Pro
 
 void OS::FCFS_SJF(bool (*sort_procs_)(Process*, Process*)) {
     int t = 0; // CPU time
+    RUNNING.clear();
     num_cs = 0;
     num_pe = 0;
-    int start;
     FCFS_SJF_update_READY(t, sort_procs_);
     // schedule jobs until no more left jobs and ready queue is empty 
     do {
@@ -131,15 +132,14 @@ void OS::FCFS_SJF(bool (*sort_procs_)(Process*, Process*)) {
         if (!READY.empty()) {
             Process* current = *READY.begin();
             READY.erase(READY.begin());
-	    if (current->num_left == current->num_bursts && current->burst_left == current -> burst_t) {
-	        start = current->curr_arr_t;
-	        int end_wait = t;
-	        current->waittime.push_back(end_wait - start);
+	    if (current->burst_left == current -> burst_t) {
+	        current->turn_start = current->curr_arr_t;
 	    }
 	    //check_io(t + ts/2, current, sort_procs_);
+	    current->waittime.push_back(t - current->curr_arr_t);
             t += ts/2; // switch in
 	    ++num_cs;
-            RUNNING = current;
+            RUNNING.push_back(current);
             print_READY(t, "Process " + current->proc_id + " started using the CPU");
 
 
@@ -152,6 +152,7 @@ void OS::FCFS_SJF(bool (*sort_procs_)(Process*, Process*)) {
 		FCFS_SJF_update_READY(t, sort_procs_);
 		if (!READY.empty()){
 		    READY.push_back(current);
+		    ++num_pe;
             	    print_READY(t,"Time slice expired; process " + current->proc_id + \
 			" preempted with " + std::to_string(current->burst_left) + "ms to go" );
 		    break;
@@ -166,8 +167,7 @@ void OS::FCFS_SJF(bool (*sort_procs_)(Process*, Process*)) {
             	t += current->burst_left;
 		FCFS_SJF_update_READY(t, sort_procs_);
             	(current->num_left)--;
-	   	int end_turn = t;
-	    	current->turnaround.push_back(end_turn - start);
+	    	current->turnaround.push_back(t - current->turn_start);
 		if (current->num_left > 0) {
             	    print_READY(t, "Process " + current->proc_id + " completed a CPU burst; " + \
 				    std::to_string(current->num_left) + " to go");
@@ -182,7 +182,7 @@ void OS::FCFS_SJF(bool (*sort_procs_)(Process*, Process*)) {
 	    //check_io(t + ts/2, current, sort_procs_);
             t += ts/2; // switch out
 	    FCFS_SJF_update_READY(t, sort_procs_);
-            RUNNING = NULL; // finish running
+            RUNNING.erase(std::find(RUNNING.begin(),RUNNING.end(), current)); // finish running
 
             // Process enters BLOCKED if it needs to
             if (current->num_left > 0 && current->io_t > 0 && !preempt) {
@@ -201,11 +201,9 @@ void OS::FCFS_SJF(bool (*sort_procs_)(Process*, Process*)) {
         }
     } while (!READY.empty() || !BLOCKED.empty());
     std::cout << "time " << t << "ms: Simulator ended for ";
-    //report_result();
-    reset(); 
 }
 
-void OS::report_result() {
+void OS::report_result(const char* filename, const char* algo) {
     sum_burst_t = 0;
     sum_turn = 0;
     sum_wait = 0;
@@ -220,11 +218,19 @@ void OS::report_result() {
 	}
 	sum_burst_t += procs[i].num_bursts * procs[i].burst_t;
     }
-    std::cout << "average CPU burst time: " << sum_burst_t * 1.0 / sum_burst << std::endl;
-    std::cout << "average wait time: " << sum_wait * 1.0 / sum_burst << std::endl;
-    std::cout << "average turnaround time: " << sum_turn * 1.0 / sum_burst << std::endl;
-    std::cout << "total number of context switches " << num_cs << std::endl;
-    std::cout << "total number of preemption " << num_pe << std::endl;
+    std::ofstream out_str;
+    out_str.open(filename, std::ofstream::out | std::ofstream::app);
+    out_str.precision(2);
+    out_str << "Algorithm " << algo << std::endl;
+    out_str << std::fixed;
+    out_str << "-- average CPU burst time: "<< sum_burst_t * 1.0 / sum_burst << std::endl;
+    //out_str << std::fixed;
+    out_str << "-- average wait time: " << sum_wait * 1.0 / sum_burst << std::endl;
+    //out_str << std::fixed;
+    out_str << "-- average turnaround time: " <<sum_turn * 1.0 / sum_burst << std::endl;
+    out_str << "-- total number of context switches " << num_cs << std::endl;
+    out_str << "-- total number of preemption " << num_pe << std::endl;
+    out_str.close();
 }
 
 void OS::reset() {
