@@ -119,10 +119,11 @@ void OS::check_io(int t_, Process* current_, bool (*sort_procs_)(Process* p, Pro
     }
 }
 
-void OS::FCFS_SJF(bool (*sort_procs_)(Process*, Process*)) {
+void OS::FCFS_SJF(bool (*sort_procs_)(Process*, Process*), const char* algo) {
     int t = 0; // CPU time
     num_cs = 0;
     num_pe = 0;
+    std::cout << "time 0ms: Simulator started for " << algo <<" [Q empty]" << std::endl;
     FCFS_SJF_update_READY(t, sort_procs_);
     // schedule jobs until no more left jobs and ready queue is empty 
     do {
@@ -199,7 +200,7 @@ void OS::FCFS_SJF(bool (*sort_procs_)(Process*, Process*)) {
             t = tmp->curr_arr_t;
         }
     } while (!READY.empty() || !BLOCKED.empty());
-    std::cout << "time " << t << "ms: Simulator ended for ";
+    std::cout << "time " << t << "ms: Simulator ended for " << algo << std::endl;
 }
 
 void OS::report_result(const char* filename, const char* algo) {

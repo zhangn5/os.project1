@@ -33,26 +33,18 @@ int main(int argc, const char * argv[]) {
 
     OS myos(p_container, 1, 8);
 
-    std::cout << "time 0ms: Simulator started for FCFS [Q empty]" << std::endl;
-    myos.FCFS_SJF(OS::FCFS_sort);
-    std::cout << "FCFS" << std::endl;
+    myos.FCFS_SJF(OS::FCFS_sort, "FCFS");
     std::cout << std::endl;
     myos.report_result(argv[2], "FCFS");
     myos.reset();
 
-    std::cout << "time 0ms: Simulator started for SJF [Q empty]" << std::endl;
-    myos.FCFS_SJF(OS::SJF_sort);
-    std::cout << "SJF" << std::endl;
+    myos.FCFS_SJF(OS::SJF_sort, "SJF");
     std::cout << std::endl;
     myos.report_result(argv[2], "SJF");
     myos.reset();
 
-
-
     OS myos2(p_container,1, 8, 84);
-    std::cout << "time 0ms: Simulator started for RR [Q empty]" << std::endl;
-    myos2.FCFS_SJF(OS::FCFS_sort);
-    std::cout << "RR" << std::endl;
+    myos2.FCFS_SJF(OS::FCFS_sort, "RR");
     myos2.report_result(argv[2], "RR");
     myos.reset();
     return 0;

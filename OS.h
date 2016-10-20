@@ -49,7 +49,7 @@ public:
     void print_READY(int t, const std::string& message);
     // FCFS
     void FCFS_SJF_update_READY(int t, bool (*sort_procs)(Process* p, Process* q));
-    void FCFS_SJF(bool (*sort_procs)(Process* p, Process* q));
+    void FCFS_SJF(bool (*sort_procs)(Process* p, Process* q), const char*);
     bool FCFS_SJF_all_done();
     void check_io(int, Process*, bool (*sort_procs)(Process* p, Process* q));
     void report_result(const char*, const char* );
