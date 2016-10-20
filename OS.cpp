@@ -43,10 +43,10 @@ void Process::print() {
 	std::cout << proc_id << '|' << ini_arr_t << '|' << burst_t << '|' << num_bursts << '|' << io_t << std::endl;
 }
 
-OS::OS(const std::vector<Process>& processes, const int nprocs , const int time_switch)
+OS::OS(const std::vector<Process>& processes, const int m, const int time_switch)
 {
 	procs = processes;
-	m = nprocs;
+	nprocs  = m;
 	ts = time_switch;
 	time_slice = 0;
 	for (unsigned int i = 0; i< procs.size(); ++i) {
@@ -68,7 +68,7 @@ void OS::FCFS_SJF_update_READY(int t, bool (*sort_procs)(Process*, Process*)) {
     for (unsigned int i = 0; i < procs.size(); ++i) {
         if (procs[i].curr_arr_t <= t && procs[i].num_left > 0 \
             && std::find(READY.begin(), READY.end(), &procs[i]) == READY.end() && \
-		std::find(RUNNING.begin(), RUNNING.end(), &procs[i])== RUNNING.end()) {
+            RUNNING.find(&procs[i]) == RUNNING.end()) {
             ready_processes.push_back(&procs[i]);
         }
     }
@@ -121,7 +121,6 @@ void OS::check_io(int t_, Process* current_, bool (*sort_procs_)(Process* p, Pro
 
 void OS::FCFS_SJF(bool (*sort_procs_)(Process*, Process*)) {
     int t = 0; // CPU time
-    RUNNING.clear();
     num_cs = 0;
     num_pe = 0;
     FCFS_SJF_update_READY(t, sort_procs_);
@@ -139,7 +138,7 @@ void OS::FCFS_SJF(bool (*sort_procs_)(Process*, Process*)) {
 	    current->waittime.push_back(t - current->curr_arr_t);
             t += ts/2; // switch in
 	    ++num_cs;
-            RUNNING.push_back(current);
+            RUNNING.insert(current);
             print_READY(t, "Process " + current->proc_id + " started using the CPU");
 
 
@@ -182,7 +181,7 @@ void OS::FCFS_SJF(bool (*sort_procs_)(Process*, Process*)) {
 	    //check_io(t + ts/2, current, sort_procs_);
             t += ts/2; // switch out
 	    FCFS_SJF_update_READY(t, sort_procs_);
-            RUNNING.erase(std::find(RUNNING.begin(),RUNNING.end(), current)); // finish running
+        RUNNING.erase(current);
 
             // Process enters BLOCKED if it needs to
             if (current->num_left > 0 && current->io_t > 0 && !preempt) {
@@ -223,13 +222,13 @@ void OS::report_result(const char* filename, const char* algo) {
     out_str.precision(2);
     out_str << "Algorithm " << algo << std::endl;
     out_str << std::fixed;
-    out_str << "-- average CPU burst time: "<< sum_burst_t * 1.0 / sum_burst << std::endl;
+    out_str << "-- average CPU burst time: "<< sum_burst_t * 1.0 / sum_burst << " ms" << std::endl;
     //out_str << std::fixed;
-    out_str << "-- average wait time: " << sum_wait * 1.0 / sum_burst << std::endl;
+    out_str << "-- average wait time: " << sum_wait * 1.0 / sum_burst << " ms" << std::endl;
     //out_str << std::fixed;
-    out_str << "-- average turnaround time: " <<sum_turn * 1.0 / sum_burst << std::endl;
-    out_str << "-- total number of context switches " << num_cs << std::endl;
-    out_str << "-- total number of preemption " << num_pe << std::endl;
+    out_str << "-- average turnaround time: " <<sum_turn * 1.0 / sum_burst << " ms" << std::endl;
+    out_str << "-- total number of context switches: " << num_cs << std::endl;
+    out_str << "-- total number of preemptions: " << num_pe << std::endl;
     out_str.close();
 }
 

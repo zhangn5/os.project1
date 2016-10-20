@@ -1,6 +1,7 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <set>
 #include <fstream>
 
 class Process {
@@ -27,12 +28,12 @@ private:
 class OS {
 private:
     std::list<Process*> READY;      // queue of ready jobs
-    std::vector<Process*> RUNNING;
+    std::set<Process*> RUNNING;
     std::list<Process*> BLOCKED;    // queue of io jobs
     std::vector<Process> procs;
     int num_cs;
     int num_pe;
-    int m;
+    int nprocs;
     int ts;
     int sum_turn;
     int sum_wait;
@@ -41,10 +42,10 @@ private:
 public:
     static bool FCFS_sort(Process* p, Process* q);
     static bool SJF_sort(Process* p, Process* q);
-    OS(const std::vector<Process>& processes, const int nprocs , const int time_switch, const int time_slice_ ) : \
-    procs(processes), m(nprocs), ts(time_switch), time_slice(time_slice_) {}; // constructor for RR
+    OS(const std::vector<Process>& processes, const int m, const int time_switch, const int time_slice_ ) : \
+    procs(processes), nprocs(m), ts(time_switch), time_slice(time_slice_) {}; // constructor for RR
 
-    OS(const std::vector<Process>& processes, const int nprocs , const int time_switch );// constructor for FCFS and SJF
+    OS(const std::vector<Process>& processes, const int m, const int time_switch );// constructor for FCFS and SJF
     void print_READY(int t, const std::string& message);
     // FCFS
     void FCFS_SJF_update_READY(int t, bool (*sort_procs)(Process* p, Process* q));
@@ -54,3 +55,4 @@ public:
     void report_result(const char*, const char* );
     void reset();
 };
+
