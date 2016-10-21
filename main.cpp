@@ -1,3 +1,8 @@
+/*
+ * Operating Systems Project 1
+ * Team members: Jie Cheng, Wei Peng, Ni Zhang
+ * */
+
 #include <iostream>
 #include <fstream>
 #include "OS.h"
@@ -16,10 +21,10 @@ int main(int argc, const char * argv[]) {
 
     std::ofstream out_str(argv[2]);
     if (!out_str.good()) {
-	std::cerr << "Can not open" <<argv[2] << " to write." << std::endl;
+        std::cerr << "Can not open" <<argv[2] << " to write." << std::endl;
     }
 
-    //read the processes from file as lines
+    //read the processes from file
     std::vector<Process> p_container;
     while (1) {
     	Process p;
@@ -31,21 +36,21 @@ int main(int argc, const char * argv[]) {
     }
     in_str.close();
 
-    OS myos(p_container, 1, 8);
+    OS myos(p_container, 1, 8); // 1 processor, context switch time = 8 ms
 
-    myos.FCFS_SJF(OS::FCFS_sort, "FCFS");
+    myos.schedule(OS::FCFS_sort, "FCFS");
     std::cout << std::endl;
-    myos.report_result(argv[2], "FCFS");
+    myos.report_result(std::string(argv[2]), "FCFS");
     myos.reset();
 
-    myos.FCFS_SJF(OS::SJF_sort, "SJF");
+    myos.schedule(OS::SJF_sort, "SJF");
     std::cout << std::endl;
-    myos.report_result(argv[2], "SJF");
+    myos.report_result(std::string(argv[2]), "SJF");
     myos.reset();
 
-    OS myos2(p_container,1, 8, 84);
-    myos2.FCFS_SJF(OS::FCFS_sort, "RR");
-    myos2.report_result(argv[2], "RR");
+    OS myos2(p_container,1, 8, 84); // 1 processor, context switch time = 8 ms, time slice = 84 ms
+    myos2.schedule(OS::FCFS_sort, "RR");
+    myos2.report_result(std::string(argv[2]), "RR");
     myos.reset();
     return 0;
 }
