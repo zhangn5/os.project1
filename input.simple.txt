@@ -1,7 +1,0 @@
-# example simulator input file
-#
-# <proc-id>|<initial-arrival-time>|<cpu-burst-time>|<num-bursts>|<io-time>\n
-A|0|200|3|300
-B|0|400|1|0
-C|100|100|2|2500
-D|150|1000|2|800
