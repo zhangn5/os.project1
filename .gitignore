@@ -16,8 +16,12 @@
 *.lib
 
 # Executables
+*.out
 *.exe
 *.out
 *.app
 test
 *.txt
+
+# vim
+*.swp
