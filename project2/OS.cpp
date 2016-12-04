@@ -96,6 +96,23 @@ void OS::print_memory() {
     std::cout << temp << std::endl;
 }
 
+void OS::print_queue() {
+    if ( waiting.empty() ) std::cout << "waiting is empty" << std::endl;
+    else {
+        std::cout << "waiting queue" << std::endl; 
+        for (auto p = waiting.begin(); p!= waiting.end(); ++p)
+            std::cout << (*p)->id << " ";
+        std::cout << std::endl;
+    }
+    if ( running.empty() ) std::cout << "running is empty" << std::endl;
+    else {
+        std::cout << "running queue" << std::endl; 
+        for (auto p = running.begin(); p!= running.end(); ++p)
+            std::cout << (*p)->id << " ";
+        std::cout << std::endl;
+    }
+}
+
 void OS::finish_process() {
     clock = (*running.begin())->finish;
     auto p = *running.begin();
@@ -149,7 +166,7 @@ void OS::finish_process() {
         }
     }
     std::cout << "time " << clock << "ms: Process " << p->id << " removed:" << std::endl;
-    print_memory();
+    //print_memory();
     p->positions.pop_back();
     running.erase(running.begin());
 }
@@ -157,6 +174,7 @@ void OS::finish_process() {
 void OS::start_process(int type) {
     clock = (*waiting.begin())->start;
     auto p = *waiting.begin();
+    print_queue();
     switch(type) {
         case 0: { // next-fit
             bool placed = false;
@@ -167,6 +185,8 @@ void OS::start_process(int type) {
                     for (int i = q->first; i < q->first + p->mem_size; ++i) {
                         memory[i] = p->id;
                     }
+                    std::cout << "after placed" << (*waiting.begin())->id <<std::endl;
+                    print_queue();
                     p->positions.push_back(std::pair<int, int>(std::make_pair(q->first, q->first+p->mem_size-1)));
                     most_recent = q->first + p->mem_size - 1;
                     q->first = most_recent + 1;
@@ -176,6 +196,8 @@ void OS::start_process(int type) {
                     placed = true;
                     running.push_back(p);
                     running.sort(sort_by_finish);
+                    std::cout << "time " << clock << "ms: Placed process " << (*waiting.begin())->id << ":" << std::endl;
+                    waiting.erase(waiting.begin());
                     break;
                 }
             }
@@ -275,7 +297,7 @@ void OS::defragmentation() {
             std::cout << ")" << std::endl;
         }
     }
-    print_memory();
+    //print_memory();
 }
 
 

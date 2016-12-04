@@ -17,6 +17,7 @@ private:
     static bool sort_by_position(Process* a, Process* b);
     void start_process(int type);
     void finish_process();
+    void print_queue();
 private:
     std::vector<Process> procs;
     std::string memory;
