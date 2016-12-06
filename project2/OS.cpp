@@ -220,10 +220,10 @@ void OS::start_process(int type) {
         std::cout << "time " << clock << "ms: Cannot place process " << p->id << " -- skipped!" << std::endl;
         return;
     }
-    std::list<std::pair<int, int> >::iterator q;
+    std::vector<std::list<std::pair<int, int> >::iterator> memory_to_use;
     switch (type) {
         case 0: {
-            q = next_free_memory;
+            auto q = next_free_memory;
             do {
                 if (q->second - q->first + 1 >= p->mem_size) {
                     placed = true;
@@ -234,29 +234,49 @@ void OS::start_process(int type) {
                     q = free_memory.begin();
                 }
             } while (q != next_free_memory);
+            memory_to_use.push_back(q);
             break;
         }
         case 1: { // best-fit
-            q = best_free_memory;
+            memory_to_use.push_back(best_free_memory);
             break;
         }
         case 2: { // worst-fit
-            q = worst_free_memory;
+            memory_to_use.push_back(worst_free_memory);
             break;
         }
         case 3: { // non-contiguous
+            placed = true;
+            auto q = free_memory.begin();
+            int count = 0;
+            while (q != free_memory.end()) {
+                memory_to_use.push_back(q);
+                count += q->second - q->first + 1;
+                if (count > p->mem_size) {
+                    break;
+                }
+                q++;
+            }
             break;
         }
     }
     if (placed) {
-        for (int i = q->first; i < q->first + p->mem_size; ++i) {
-            memory[i] = p->id;
-        }
-        p->positions.push_back(std::pair<int, int>(std::make_pair(q->first, q->first+p->mem_size-1)));
-        most_recent = q->first + p->mem_size - 1;
-        q->first = most_recent + 1;
-        if (q->first == q->second + 1) { // in this case the empty slot was used up
-            free_memory.erase(q);
+        int count = 0;
+        for (auto q : memory_to_use) {
+            int i = 0;
+            for (i = q->first; i <= q->second; ++i) {
+                memory[i] = p->id;
+                count++;
+                if (count == p->mem_size) {
+                    break;
+                }
+            }
+            p->positions.push_back(std::pair<int, int>(std::make_pair(q->first, i)));
+            most_recent = i;
+            q->first = most_recent + 1;
+            if (q->first == q->second + 1) { // in this case the empty slot was used up
+                free_memory.erase(q);
+            }
         }
         running.push_back(p);
         running.sort(sort_by_finish);

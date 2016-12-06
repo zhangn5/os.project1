@@ -23,6 +23,10 @@ int main(int argc, char* argv[]) {
     infile.open(argv[1]);
     OS myos2(infile, 256);
     myos2.schedule(2);
+    std::cout << std::endl;
 
+    infile.open(argv[1]);
+    OS myos3(infile, 256);
+    myos3.schedule(3);
     return 0;
 }
