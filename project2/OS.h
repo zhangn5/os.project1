@@ -7,7 +7,6 @@
 
 class OS {
 private:
-    // fuctors used as custom comparators in std::set
     void trim(std::string& s);
     bool is_number(const std::string& s);
     void defragmentation(); // reorganize memory, update running, free_memory, waiting
@@ -22,9 +21,10 @@ private:
     std::vector<Process> procs;
     std::string memory;
     int clock;
-    std::list<std::pair<int, int> > free_memory; // sort_pair
-    std::list<Process*> running; // sort_by_finish
-    std::list<Process*> waiting; // sort_by_start
+    std::list<std::pair<int, int> > free_memory; // positions of chunks of free memory 
+    // any process is in either running queue or waiting queue
+    std::list<Process*> running; // processes in running status, sort_by_finish
+    std::list<Process*> waiting; // processes in waiting status, sort_by_start
     // most_recent indicates the end of the most recently placed process
     int most_recent;
 public:
