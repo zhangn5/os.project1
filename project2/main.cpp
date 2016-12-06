@@ -8,9 +8,21 @@ int main(int argc, char* argv[]) {
         std::cout << "USAGE: ./a.out <input-file>" << std::endl;
         return 1;
     }
-    std::ifstream infile(argv[1]);
+    std::ifstream infile;
+
+    infile.open(argv[1]);
     OS myos(infile, 256);
     myos.schedule(0);
+    std::cout << std::endl;
+    
+    infile.open(argv[1]);
+    OS myos1(infile, 256);
+    myos1.schedule(1);
+    std::cout << std::endl;
+
+    infile.open(argv[1]);
+    OS myos2(infile, 256);
+    myos2.schedule(2);
 
     return 0;
 }

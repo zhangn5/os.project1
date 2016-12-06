@@ -87,6 +87,8 @@ OS::OS(std::ifstream& infile, int memory_size) {
     }
     waiting.sort(sort_by_start);
     free_memory.sort(sort_pair);
+
+    infile.close();
 }
 
 void OS::print_memory() {
@@ -178,49 +180,53 @@ void OS::start_process(int type) {
     auto p = *waiting.begin();
     std::cout << "time " << clock << "ms: Process " << p->id << " arrived (requires " \
        << p->mem_size << " frames)" << std::endl;
-    switch(type) {
-        case 0: { // next-fit
-            int free_memory_size = 0; // the size of the available memory in total
-            std::list<std::pair<int, int> >::iterator next_free_memory = free_memory.end();
-            for (auto q = free_memory.begin(); q != free_memory.end(); ++q) {
-                free_memory_size += (q->second - q->first + 1);
-                if (next_free_memory == free_memory.end() && q->first > most_recent) {
-                    next_free_memory = q;
-                }
-            }
-            if (next_free_memory == free_memory.end()) {
-                next_free_memory = free_memory.begin();
-            }
-            if (free_memory_size < p->mem_size) {
-                if (--(p->burst_left) != 0) {
-                    p->start = p->arr_time[p->arr_time.size() - p->burst_left];
-                    p->finish = p->start + p->run_time[p->arr_time.size() - p->burst_left];
-                    // re-sort waiting
-                    waiting.sort(sort_by_start);
-                } else {
-                    waiting.erase(waiting.begin());
-                }
-                std::cout << "time " << clock << "ms: Cannot place process " << p->id << " -- skipped!" << std::endl;
-                break;
-            }
-            bool placed = false; // whether the process could be inserted into the memory
-            auto q = next_free_memory;
+    int free_memory_size = 0; // the size of the available memory in total
+    auto next_free_memory = free_memory.end();
+    auto best_free_memory = free_memory.end();
+    int min = memory.size() + 1;
+    auto worst_free_memory = free_memory.end();
+    int max = 0;
+    bool placed = false; // whether the process could be inserted into the memory
+    for (auto q = free_memory.begin(); q != free_memory.end(); ++q) {
+        free_memory_size += (q->second - q->first + 1);
+        if (next_free_memory == free_memory.end() && q->first > most_recent) {
+            next_free_memory = q;
+        }
+        if (q->second - q->first + 1 >= p->mem_size) {
+           if (q->second - q->first + 1 < min) {
+               best_free_memory = q;
+               min = q->second - q->first + 1;
+               placed = true;
+           } 
+           if (q->second - q->first + 1 > max) {
+               worst_free_memory = q;
+               max = q->second - q->first + 1;
+               placed = true;
+           }
+        }
+    }
+    if (next_free_memory == free_memory.end()) {
+        next_free_memory = free_memory.begin();
+    }
+    if (free_memory_size < p->mem_size) {
+        if (--(p->burst_left) != 0) {
+            p->start = p->arr_time[p->arr_time.size() - p->burst_left];
+            p->finish = p->start + p->run_time[p->arr_time.size() - p->burst_left];
+            // re-sort waiting
+            waiting.sort(sort_by_start);
+        } else {
+            waiting.erase(waiting.begin());
+        }
+        std::cout << "time " << clock << "ms: Cannot place process " << p->id << " -- skipped!" << std::endl;
+        return;
+    }
+    std::list<std::pair<int, int> >::iterator q;
+    switch (type) {
+        case 0: {
+            q = next_free_memory;
             do {
                 if (q->second - q->first + 1 >= p->mem_size) {
-                    for (int i = q->first; i < q->first + p->mem_size; ++i) {
-                        memory[i] = p->id;
-                    }
-                    p->positions.push_back(std::pair<int, int>(std::make_pair(q->first, q->first+p->mem_size-1)));
-                    most_recent = q->first + p->mem_size - 1;
-                    q->first = most_recent + 1;
-                    if (q->first == q->second + 1) { // in this case the empty slot was used up
-                        free_memory.erase(q);
-                    }
                     placed = true;
-                    running.push_back(p);
-                    running.sort(sort_by_finish);
-                    std::cout << "time " << clock << "ms: Placed process " << (*waiting.begin())->id << ":" << std::endl;
-                    waiting.erase(waiting.begin());
                     break;
                 }
                 q++;
@@ -228,23 +234,39 @@ void OS::start_process(int type) {
                     q = free_memory.begin();
                 }
             } while (q != next_free_memory);
-            if (!placed) {
-                // defragmentation
-                std::cout << "time " << clock << "ms: Cannot place process " \
-                    << p->id << " -- starting defragmentation" << std::endl;
-                defragmentation();
-            }
             break;
         }
         case 1: { // best-fit
+            q = best_free_memory;
             break;
         }
         case 2: { // worst-fit
+            q = worst_free_memory;
             break;
         }
         case 3: { // non-contiguous
             break;
         }
+    }
+    if (placed) {
+        for (int i = q->first; i < q->first + p->mem_size; ++i) {
+            memory[i] = p->id;
+        }
+        p->positions.push_back(std::pair<int, int>(std::make_pair(q->first, q->first+p->mem_size-1)));
+        most_recent = q->first + p->mem_size - 1;
+        q->first = most_recent + 1;
+        if (q->first == q->second + 1) { // in this case the empty slot was used up
+            free_memory.erase(q);
+        }
+        running.push_back(p);
+        running.sort(sort_by_finish);
+        std::cout << "time " << clock << "ms: Placed process " << (*waiting.begin())->id << ":" << std::endl;
+        waiting.erase(waiting.begin());
+    } else {
+        // defragmentation
+        std::cout << "time " << clock << "ms: Cannot place process " \
+            << p->id << " -- starting defragmentation" << std::endl;
+        defragmentation();
     }
 }
 
