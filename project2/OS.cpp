@@ -75,20 +75,22 @@ OS::OS(std::ifstream& infile, int memory_size) {
                 i++;
             }
             procs.push_back(Process(c, m, arr, run));
-            waiting.push_back(&procs[procs.size()-1]);
         }
     }
-    memory = std::string(".", memory_size);
+    memory = std::string(memory_size, '.');
     clock = 0;
-    most_recent = -1;
     free_memory.push_back(std::make_pair(0, memory_size-1));
+    most_recent = -1;
 
+    for (int i = 0; i < procs.size(); ++i) {
+        waiting.push_back(&procs[i]);
+    }
     waiting.sort(sort_by_start);
     free_memory.sort(sort_pair);
 }
 
 void OS::print_memory() {
-    std::string temp('=', 32);
+    std::string temp(32, '=');
     std::cout << temp << std::endl;
     for (int i = 0; i < 8; ++i) {
         std::cout << memory.substr(memory.size()/8*i, memory.size()/8) << std::endl;
@@ -167,30 +169,51 @@ void OS::finish_process() {
     }
     std::cout << "time " << clock << "ms: Process " << p->id << " removed:" << std::endl;
     //print_memory();
-    p->positions.pop_back();
+    p->positions.clear();
     running.erase(running.begin());
 }
 
 void OS::start_process(int type) {
     clock = (*waiting.begin())->start;
     auto p = *waiting.begin();
-    print_queue();
+    std::cout << "time " << clock << "ms: Process " << p->id << " arrived (requires " \
+       << p->mem_size << " frames)" << std::endl;
     switch(type) {
         case 0: { // next-fit
-            bool placed = false;
-            int free_memory_size = 0;
+            int free_memory_size = 0; // the size of the available memory in total
+            std::list<std::pair<int, int> >::iterator next_free_memory = free_memory.end();
             for (auto q = free_memory.begin(); q != free_memory.end(); ++q) {
                 free_memory_size += (q->second - q->first + 1);
-                if (q->first > most_recent && q->second - most_recent >= p->mem_size) {
+                if (next_free_memory == free_memory.end() && q->first > most_recent) {
+                    next_free_memory = q;
+                }
+            }
+            if (next_free_memory == free_memory.end()) {
+                next_free_memory = free_memory.begin();
+            }
+            if (free_memory_size < p->mem_size) {
+                if (--(p->burst_left) != 0) {
+                    p->start = p->arr_time[p->arr_time.size() - p->burst_left];
+                    p->finish = p->start + p->run_time[p->arr_time.size() - p->burst_left];
+                    // re-sort waiting
+                    waiting.sort(sort_by_start);
+                } else {
+                    waiting.erase(waiting.begin());
+                }
+                std::cout << "time " << clock << "ms: Cannot place process " << p->id << " -- skipped!" << std::endl;
+                break;
+            }
+            bool placed = false; // whether the process could be inserted into the memory
+            auto q = next_free_memory;
+            do {
+                if (q->second - q->first + 1 >= p->mem_size) {
                     for (int i = q->first; i < q->first + p->mem_size; ++i) {
                         memory[i] = p->id;
                     }
-                    std::cout << "after placed" << (*waiting.begin())->id <<std::endl;
-                    print_queue();
                     p->positions.push_back(std::pair<int, int>(std::make_pair(q->first, q->first+p->mem_size-1)));
                     most_recent = q->first + p->mem_size - 1;
                     q->first = most_recent + 1;
-                    if (q->first == q->second + 1) {
+                    if (q->first == q->second + 1) { // in this case the empty slot was used up
                         free_memory.erase(q);
                     }
                     placed = true;
@@ -200,22 +223,16 @@ void OS::start_process(int type) {
                     waiting.erase(waiting.begin());
                     break;
                 }
-            }
-            if (!placed) {
-                if (p->mem_size <= free_memory_size) {
-                    // defragmentation
-                    std::cout << "time " << clock << "ms: " << "Cannot place process " \
-                        << p->id << " -- starting defragmentation" << std::endl;
-                    defragmentation();
-                } else {
-                    if (--(p->burst_left) != 0) {
-                        p->start = p->arr_time[p->arr_time.size() - p->burst_left];
-                        p->finish = p->start + p->run_time[p->arr_time.size() - p->burst_left];
-                        // re-sort waiting
-                        waiting.sort(sort_by_start);
-                    }
-                    std::cout << "time " << clock << "ms: Cannot place process " << p->id << " -- skipped!" << std::endl;
+                q++;
+                if (q == free_memory.end()) {
+                    q = free_memory.begin();
                 }
+            } while (q != next_free_memory);
+            if (!placed) {
+                // defragmentation
+                std::cout << "time " << clock << "ms: Cannot place process " \
+                    << p->id << " -- starting defragmentation" << std::endl;
+                defragmentation();
             }
             break;
         }
@@ -232,6 +249,26 @@ void OS::start_process(int type) {
 }
 
 void OS::schedule(int type) {
+    std::string algorithm;
+    switch (type) {
+        case 0: {
+            algorithm = "(Contiguous -- Next-Fit)";
+            break;
+        }
+        case 1: {
+            algorithm = "(Contiguous -- Best-Fit)";
+            break;
+        }
+        case 2: {
+            algorithm = "(Contiguous -- Worst-Fit)";
+            break;
+        }
+        case 3: {
+            algorithm = "(Non-contiguous)";
+            break;
+        }
+    }
+    std::cout << "time " << clock << "ms: Simulator started " << algorithm << std::endl;
     do {
         // find the next interesting event
         if (!running.empty() && !waiting.empty()) {
@@ -245,15 +282,15 @@ void OS::schedule(int type) {
         } else if (!running.empty() && waiting.empty()) {
             finish_process();
         }
+        print_memory();
     } while (!running.empty() || !waiting.empty());
+    std::cout << "time " << clock << "ms: Simulator ended " << algorithm << std::endl;
 }
 
 void OS::defragmentation() {
-    auto memory_copy = memory;
     auto running_copy = running;
     running_copy.sort(sort_by_position);
     
-    std::vector<Process*> shuffled_process;
     int current_position = 0;
     for (auto ptr : running_copy) {
         int size = ptr->positions[0].second - ptr->positions[0].first + 1;
@@ -264,7 +301,6 @@ void OS::defragmentation() {
                 ptr->positions[0].second != current_position + size - 1) {
             ptr->positions[0].first = current_position;
             ptr->positions[0].second = current_position + size - 1;
-            shuffled_process.push_back(ptr);
         }
         current_position += size;
     }
@@ -274,7 +310,7 @@ void OS::defragmentation() {
 
     int count_diff = 0;
     for (int i = 0; i < memory.size(); ++i) {
-        if (memory[i] != memory_copy[i]) {
+        if (memory[i] != '.') {
             count_diff++;
         }
     }
@@ -286,18 +322,21 @@ void OS::defragmentation() {
         proc.start += count_diff;
         proc.finish += count_diff;
     }
+    free_memory.clear();
+    free_memory.push_back(std::pair<int,int>(std::make_pair(count_diff, memory.size()-1)));
 
     std::cout << "time " << clock << "ms: Defragmentation complete (moved " \
         << count_diff << " frames: ";
-    for (int i = 0; i < shuffled_process.size(); ++i) {
-        std::cout << shuffled_process[i]->id;
-        if (i != shuffled_process.size()-1) {
+    auto p = running_copy.begin();
+    while (true) {
+        std::cout << (*p)->id;
+        if (++p != running_copy.end()) {
             std::cout << ", ";
         } else {
-            std::cout << ")" << std::endl;
+            break;
         }
     }
-    //print_memory();
+    std::cout << ")" << std::endl;
 }
 
 

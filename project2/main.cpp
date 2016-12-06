@@ -10,8 +10,6 @@ int main(int argc, char* argv[]) {
     }
     std::ifstream infile(argv[1]);
     OS myos(infile, 256);
-    myos.print();
-
     myos.schedule(0);
 
     return 0;

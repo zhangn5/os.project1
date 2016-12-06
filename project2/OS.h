@@ -22,10 +22,11 @@ private:
     std::vector<Process> procs;
     std::string memory;
     int clock;
-    int most_recent; // the end of the most recently placed process
     std::list<std::pair<int, int> > free_memory; // sort_pair
     std::list<Process*> running; // sort_by_finish
     std::list<Process*> waiting; // sort_by_start
+    // most_recent indicates the end of the most recently placed process
+    int most_recent;
 public:
     OS(std::ifstream& infile, int memory_size);
     void schedule(int type);
