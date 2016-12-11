@@ -9,7 +9,7 @@ class OS {
 private:
     void trim(std::string& s);
     bool is_number(const std::string& s);
-    bool defrag;
+    bool defrag; //whether defragmentation could happen
     void defragmentation(); // reorganize memory, update running, free_memory, waiting
     static bool sort_by_start(Process* a, Process* b);
     static bool sort_by_finish(Process* a, Process* b);
@@ -17,7 +17,6 @@ private:
     static bool sort_by_position(Process* a, Process* b);
     void start_process(int type);
     void finish_process();
-    void print_queue();
 private:
     std::vector<Process> procs;
     std::string memory;
@@ -31,7 +30,5 @@ private:
 public:
     OS(std::ifstream& infile, int memory_size);
     void schedule(int type);
-    void print();
     void print_memory();
-    void print_free_memory();
 };
