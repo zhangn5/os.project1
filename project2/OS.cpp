@@ -72,6 +72,7 @@ OS::OS(std::ifstream& infile, int memory_size) {
     clock = 0; // the clock used for simulation
     free_memory.push_back(std::make_pair(0, memory_size-1));// initially, the whole memory is free momory
     most_recent = -1;// cause nothing is used, we assume -1 is the last used memory.
+    defrag = false;
 
     for (int i = 0; i < procs.size(); ++i) {
         waiting.push_back(&procs[i]);
@@ -111,6 +112,15 @@ void OS::print_queue() {
 }
 */
 
+void OS::print_free_memory() {
+    if (free_memory.empty())
+        std::cout << "free memory is empty" << std::endl;
+    else {
+        for (auto pos : free_memory)
+            std::cout << "[" << pos.first << " " << pos.second << "]" << std::endl;
+    }
+}
+
 void OS::finish_process() {
     clock = (*running.begin())->finish;
     // finish the first element of running queue
@@ -119,38 +129,42 @@ void OS::finish_process() {
         for (int i = pos.first; i <= pos.second; ++i) {
             memory[i] = '.';
         }
-        auto q = free_memory.begin();
-        // the newly released memory which was used used by finished process becomes free
-        // find an appropriate position to insert into the free memory list
-        while (q != free_memory.end()) {
-            if (q->first > pos.first) {
+        if (free_memory.empty()) {
+            free_memory.push_back(pos);
+        } else {
+            auto q = free_memory.begin();
+            // the newly released memory which was used used by finished process becomes free
+            // find an appropriate position to insert into the free memory list
+            while (q != free_memory.end()) {
+                if (q->first > pos.first) {
+                    q = free_memory.insert(q, pos);
+                    break;
+                }
+                q++;
+            }
+            // if the newly released memory is after the last chunk of free memory
+            if (q == free_memory.end()) {
                 q = free_memory.insert(q, pos);
-                break;
             }
-            q++;
-        }
-        // if the newly released memory is after the last chunk of free memory
-        if (q == free_memory.end()) {
-            q = free_memory.insert(q, pos);
-        }
-        // merge if necessary
-        // check if the newly released memory could be merged with the free memory right after itself
-        if (q != free_memory.begin()) {
-            auto prev = q;
-            prev--;
-            if (q->first == prev->second) {
-                q->first = prev->first;
-                free_memory.erase(prev);
+            // merge if necessary
+            // check if the newly released memory could be merged with the free memory right after itself
+            if (q != free_memory.begin()) {
+                auto prev = q;
+                prev--;
+                if (q->first == prev->second + 1) {
+                    q->first = prev->first;
+                    free_memory.erase(prev);
+                }
             }
-        }
-        // check if the newly released memory could be merged with the free memory right before itself
-        auto post = q;
-        post++;
-        if (post != free_memory.end())
-        {
-            if (q->second == post->first) {
-                q->second = post->second;
-                free_memory.erase(post);
+            // check if the newly released memory could be merged with the free memory right before itself
+            auto post = q;
+            post++;
+            if (post != free_memory.end())
+            {
+                if (q->second + 1 == post->first) {
+                    q->second = post->second;
+                    free_memory.erase(post);
+                }
             }
         }
     }
@@ -158,6 +172,9 @@ void OS::finish_process() {
                                 // and add into the waiting queue
         p->start = p->arr_time[p->arr_time.size() - p->burst_left];
         p->finish = p->start + p->run_time[p->arr_time.size() - p->burst_left];
+        waiting.push_back(p);
+        waiting.sort(sort_by_start);
+        /*
         auto itr = waiting.begin();
         while (itr != waiting.end()) {
             if ((*itr)->start > p->start) {
@@ -169,6 +186,7 @@ void OS::finish_process() {
         if (itr == waiting.end()) {
             itr = waiting.insert(itr, p);
         }
+        */
     }
     std::cout << "time " << clock << "ms: Process " << p->id << " removed:" << std::endl;
     p->positions.clear();
@@ -178,38 +196,45 @@ void OS::finish_process() {
 void OS::start_process(int type) {
     clock = (*waiting.begin())->start;
     auto p = *waiting.begin();
-    std::cout << "time " << clock << "ms: Process " << p->id << " arrived (requires " \
-       << p->mem_size << " frames)" << std::endl;
+    if (!defrag) {
+    //if defragmentation does not happen right before this event,
+    //we should output this message
+        std::cout << "time " << clock << "ms: Process " << p->id << " arrived (requires " \
+           << p->mem_size << " frames)" << std::endl;
+    }
     int free_memory_size = 0; // the size of the available memory in total
     auto next_free_memory = free_memory.end();// the free memory right after most recently added process
+                                              // it's the searching starting point for next-fit algorithm
     auto best_free_memory = free_memory.end();// the free memory that's gonna be filled for best fit algorithm
     int min = memory.size() + 1;
     auto worst_free_memory = free_memory.end();// the free memory that's gonna be filled for worst fit algorithm
     int max = 0;
-    bool placed = false; // whether the process could be inserted into the memory without defragmentation
+    //bool placed = false; // whether the process could be inserted into the memory without defragmentation
+    defrag = true;
     for (auto q = free_memory.begin(); q != free_memory.end(); ++q) {
         free_memory_size += (q->second - q->first + 1);
         if (next_free_memory == free_memory.end() && q->first > most_recent) {
             next_free_memory = q;// only executed once, when the q->first is larger than most_recent
         }
         if (q->second - q->first + 1 >= p->mem_size) {
+           // if any free memory is big enough, then defragmentation won't happen
+           defrag = false; 
            if (q->second - q->first + 1 < min) {
                best_free_memory = q;
                min = q->second - q->first + 1;
-               placed = true;
            } 
            if (q->second - q->first + 1 > max) {
                worst_free_memory = q;
                max = q->second - q->first + 1;
-               placed = true;
            }
-        }
+        } 
     }
     if (next_free_memory == free_memory.end()) {
         next_free_memory = free_memory.begin(); //if the most_recent is the last slot of the memory
                                                 // next_free_memory should be the beginning.
     }
     if (free_memory_size < p->mem_size) {// if the free memory is not enough for the use of the newly added process, skip
+        defrag = false;
         if (--(p->burst_left) != 0) {
             p->start = p->arr_time[p->arr_time.size() - p->burst_left];
             p->finish = p->start + p->run_time[p->arr_time.size() - p->burst_left];
@@ -221,8 +246,8 @@ void OS::start_process(int type) {
         std::cout << "time " << clock << "ms: Cannot place process " << p->id << " -- skipped!" << std::endl;
         return;
     }
-    // the memory to use
-    // for contiguous algorithm, it has only one single value. The iterator of the free memory that's gonna be used
+    // find which free memory to use
+    // for contiguous algorithm, it has only one single value, that is the iterator of the free memory that's gonna be used
     // for noncontiguous algorithm, it will store the scattered free memory till enough spaces are accumulated.
     std::vector<std::list<std::pair<int, int> >::iterator> memory_to_use;
     switch (type) {
@@ -232,7 +257,7 @@ void OS::start_process(int type) {
             do {
                 if (q->second - q->first + 1 >= p->mem_size) {
                 // when enough spaces are found, break the loop
-                    placed = true;
+                    //placed = true;
                     break;
                 }
                 q++;
@@ -256,13 +281,14 @@ void OS::start_process(int type) {
         case 3: { // non-contiguous
             // for non-contigous algorithm, the process must be able to be filled into the memory without defragmentation
             // if there are enough free spaces, so convert placed into true
-            placed = true;
+            //placed = true;
+            defrag = false;
             auto q = free_memory.begin();
             int count = 0;
             while (q != free_memory.end()) {
                 memory_to_use.push_back(q);// store the free memory position information
                 count += q->second - q->first + 1;
-                if (count > p->mem_size) {
+                if (count >= p->mem_size) {
                     //after enough spaces are accumulated
                     //break the loop
                     break;
@@ -272,7 +298,8 @@ void OS::start_process(int type) {
             break;
         }
     }
-    if (placed) {
+    //if (placed) {
+    if (!defrag) {
         int count = 0;
         for (auto q : memory_to_use) {
             int i = 0;
@@ -284,12 +311,16 @@ void OS::start_process(int type) {
                     break;
                 }
             }
+            if (i == q->second + 1) --i;
             //update the positions of memory which each process are using
             p->positions.push_back(std::pair<int, int>(std::make_pair(q->first, i)));
             most_recent = i;
             q->first = most_recent + 1;
             if (q->first == q->second + 1) { // in this case the empty slot was used up
                 free_memory.erase(q);
+            }
+            if (count == p->mem_size) {
+                break;
             }
         }
         running.push_back(p);
@@ -339,19 +370,38 @@ void OS::schedule(int type) {
             finish_process();
         }
         print_memory();
+        //if (type == 3) print_free_memory();
     } while (!running.empty() || !waiting.empty());
     std::cout << "time " << clock << "ms: Simulator ended " << algorithm << std::endl;
 }
 
 void OS::defragmentation() {
+    //find the first free memory to be used for calculate
+    //how many frames have been moved
+    int first_free_mem = 0;
+    for (int i = 0; i < memory.size(); ++i) {
+        if (memory[i] == '.') {
+            first_free_mem = i;
+            break;
+        }
+    }
     auto running_copy = running;
     // sort the running queue by positions for defragmentation
     running_copy.sort(sort_by_position);
     
     //reassign the positions of the processes
+    //and calculate how many frames have been moved.
+    //all of the processes that are after the first_free_mem 
+    //must have been moved
     int current_position = 0;
+    int count_diff = 0;
+    std::string moved_procs;
     for (auto ptr : running_copy) {
         int size = ptr->positions[0].second - ptr->positions[0].first + 1;
+        if (ptr->positions[0].first > first_free_mem){ 
+            count_diff += size;
+            moved_procs.push_back(ptr->id);
+        }
         for (int i = current_position; i <= current_position+size-1; ++i) {
             memory[i] = ptr->id;
         }
@@ -362,63 +412,28 @@ void OS::defragmentation() {
         }
         current_position += size;
     }
-    // put the end of the memory to '.'
+    // set the end of the memory to '.'
     for (int i = current_position; i < memory.size(); ++i) {
         memory[i] = '.';
     }
 
-    // calculate how many frames have been moved
-    int count_diff = 0;
-    for (int i = 0; i < memory.size(); ++i) {
-        if (memory[i] != '.') {
-            count_diff++;
-        }
-    }
     //update the clock, start, finish, arrival time
     clock += count_diff;
     for (auto& proc : procs) {
-        for (auto& t : proc.arr_time) t += count_diff;
         for (auto& t : proc.arr_time) t += count_diff;
         proc.start += count_diff;
         proc.finish += count_diff;
     }
     // reset the free_memory position
     free_memory.clear();
-    free_memory.push_back(std::pair<int,int>(std::make_pair(count_diff, memory.size()-1)));
+    free_memory.push_back(std::pair<int,int>(std::make_pair(current_position, memory.size()-1)));
 
     std::cout << "time " << clock << "ms: Defragmentation complete (moved " \
         << count_diff << " frames: ";
     auto p = running_copy.begin();
-    while (true) {
-        std::cout << (*p)->id;
-        if (++p != running_copy.end()) {
-            std::cout << ", ";
-        } else {
-            break;
-        }
+    unsigned int i;
+    for (i = 0; i < moved_procs.size() - 1; ++i) {
+        std::cout << moved_procs[i] << ", ";
     }
-    std::cout << ")" << std::endl;
+    std::cout << moved_procs[i] << ")" << std::endl;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

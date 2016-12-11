@@ -9,6 +9,7 @@ class OS {
 private:
     void trim(std::string& s);
     bool is_number(const std::string& s);
+    bool defrag;
     void defragmentation(); // reorganize memory, update running, free_memory, waiting
     static bool sort_by_start(Process* a, Process* b);
     static bool sort_by_finish(Process* a, Process* b);
@@ -32,4 +33,5 @@ public:
     void schedule(int type);
     void print();
     void print_memory();
+    void print_free_memory();
 };

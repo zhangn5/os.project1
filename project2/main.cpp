@@ -9,7 +9,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     std::ifstream infile;
-
     infile.open(argv[1]);
     OS myos(infile, 256);
     myos.schedule(0);
@@ -28,5 +27,6 @@ int main(int argc, char* argv[]) {
     infile.open(argv[1]);
     OS myos3(infile, 256);
     myos3.schedule(3);
+    
     return 0;
 }
