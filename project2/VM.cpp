@@ -1,30 +1,27 @@
 //
-//  main.cpp
+//  VM.cpp
 //  project2
 //
-//  Created by Ni Zhang on 12/2/16.
+//  Created by Ni Zhang on 12/11/16.
 //  Copyright © 2016 Ni Zhang. All rights reserved.
 //
-
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <map>
 #include <algorithm>
+#include "VM.h"
+
 typedef std::vector<std::pair<int, int> > VEC_PAIR;
 typedef std::pair<int, int> PAIR;
 typedef std::map<int, int> MAP;
 
 bool sort_largest(const PAIR & pair1, const PAIR & pair2){
-    return pair1.first < pair2.first || ((pair1.first == pair2.first) && pair1.second < pair2.second);
+    return pair1.first < pair2.first || ((pair1.first == pair2.first) && pair1.second > pair2.second);
 }
 
-
-void read_pages(std::vector<int>& pages_in, std::ifstream & page_str){
-    int x;
-    while(page_str >> x){
-        pages_in.push_back(x);
-    }
+bool sort_largest_2(const PAIR & pair1, const PAIR & pair2){
+    return pair1.first < pair2.first || ((pair1.first == pair2.first) && pair1.second < pair2.second);
 }
 
 bool in_frame(const std::vector<int> &frame, const std::vector<int>::iterator &f_itr){
@@ -37,7 +34,19 @@ bool in_frame(const std::vector<int> &frame, const std::vector<int>::iterator &f
     return found;
 }
 
-void print_frame(const std::vector<int> &frame, unsigned int F, const std::vector<int>::iterator &f_itr, int victim, bool not_full, bool found_in_frame,std::vector<bool>& page_fault){
+
+VM::VM(std::ifstream & page_str){
+    int x;
+    while(page_str >> x){
+        this->pages_in.push_back(x);
+    }
+}
+
+
+void VM::print_frame(const std::vector<int> &frame, unsigned int F, const std::vector<int>::iterator &f_itr, int victim, bool not_full, bool found_in_frame,std::vector<bool>& page_fault){
+    
+    //if the incoming page is not found the page in the frame or
+    //the frame has space to store the page and it's a page fault
     std::cout << "referencing page "<< *f_itr << " [mem: ";
     unsigned int i = 0;
     for(; i < frame.size(); i++){
@@ -52,39 +61,39 @@ void print_frame(const std::vector<int> &frame, unsigned int F, const std::vecto
     }
     std::cout <<"]";
     
-    //if the incoming page is not found the page in the frame or
-    //the frame has space to store the page and we need to do a
-    if(not_full || !found_in_frame){
-        std::cout<< "PAGE FAULT";
-        page_fault.push_back(true);
-    }else{
-        std::cout << "NON PAGE FAULT";
-        page_fault.push_back(false);
-
-    }
+    std::cout<< " PAGE FAULT";
+    
     if(not_full || found_in_frame){
         std::cout << " (no victim page)"<<std::endl;
     }else{
-        std::cout << " (victim page " << victim <<" )"<<std::endl;
+        std::cout << " (victim page " << victim <<")"<<std::endl;
     }
     
 }
 //The Optimal (OPT) algorithm is a forward-looking algorithm that selects the “victim” page by
 //identifying the frame that will be accessed the longest time in the future (or not at all).
-void OPT(std::vector<int>& pages_in){
+void VM::OPT(){
     unsigned int F = 3;
     int largest = 0;
     std::cout << "Simulating OPT with fixed frame size of " << F << std::endl;
     std::vector<int> frame;
     std::vector<int>::iterator f_itr = pages_in.begin();
     std::vector<bool> page_fault;
+    int page_fault_counter = 0;
+    
     while(frame.size() < F && f_itr != pages_in.end()){
         bool not_full = true;
         bool found_in_frame = in_frame(frame, f_itr);
         if(!found_in_frame){
             frame.push_back(*f_itr);
+            print_frame(frame,F,f_itr,largest,not_full,found_in_frame,page_fault);
+            page_fault.push_back(true);
+            page_fault_counter++;
+        }else{
+            page_fault.push_back(false);
+            
         }
-        print_frame(frame,F,f_itr,largest,not_full,found_in_frame,page_fault);
+        
         f_itr++;
     }
     
@@ -93,7 +102,7 @@ void OPT(std::vector<int>& pages_in){
         bool not_full = false;
         bool found_in_frame = in_frame(frame, f_itr);
         if(!found_in_frame){
-
+            
             VEC_PAIR distances;
             for(unsigned int i = 0; i < frame.size(); i++){
                 std::vector<int>::iterator tmp = f_itr;
@@ -124,20 +133,30 @@ void OPT(std::vector<int>& pages_in){
                 }
             }
         }
-        print_frame(frame, F, f_itr, largest, not_full, found_in_frame, page_fault);
+        if(!found_in_frame){
+            print_frame(frame,F,f_itr,largest,not_full,found_in_frame,page_fault);
+            page_fault.push_back(true);
+            page_fault_counter++;
+            
+        }else{
+            page_fault.push_back(false);
+            
+        }
         f_itr++;
     }
+    std::cout << "End of OPT simulation ("<< page_fault_counter <<" page faults)"<< std::endl;
 }
 
 //least recently used algorithm
 //a backward-looking algorithm that selects the “victim” page by identifying the frame that has the oldest access time.
-void LRU(std::vector<int>& pages_in){
+void VM::LRU(){
     unsigned int F = 3;
     int largest = 0;
     std::cout << "Simulating LRU with fixed frame size of " << F << std::endl;
     std::vector<int> frame;
     std::vector<int>::iterator f_itr = pages_in.begin();
     std::vector<bool> page_fault;
+    int page_fault_counter = 0;
     
     //when the frame is not full, we check if the page is in the frame and if not add it and print it
     while(frame.size() < F && f_itr != pages_in.end()){
@@ -145,8 +164,17 @@ void LRU(std::vector<int>& pages_in){
         bool found_in_frame = in_frame(frame, f_itr);
         if(!found_in_frame){
             frame.push_back(*f_itr);
+            
+            print_frame(frame,F,f_itr,largest,not_full,found_in_frame,page_fault);
+            page_fault.push_back(true);
+            page_fault_counter++;
+            
+        }else{
+            page_fault.push_back(false);
+            
         }
-        print_frame(frame,F,f_itr,largest,not_full,found_in_frame,page_fault);
+        
+        
         f_itr++;
     }
     
@@ -192,29 +220,50 @@ void LRU(std::vector<int>& pages_in){
                 }
             }
         }
-        print_frame(frame, F, f_itr, largest, not_full, found_in_frame, page_fault);
+        if(!found_in_frame){
+            print_frame(frame,F,f_itr,largest,not_full,found_in_frame,page_fault);
+            page_fault.push_back(true);
+            page_fault_counter++;
+            
+            
+        }else{
+            page_fault.push_back(false);
+            
+        }
         f_itr++;
     }
+    
+    std::cout << "End of LRU simulation ("<< page_fault_counter <<" page faults)"<< std::endl;
+    
 }
 
 //Least-Frequently Used (LFU) algorithm
 //a backward-looking algorithm that selects the “victim” page by identifying the frame with the lowest number of accesses. When a page fault occurs for a given page, its reference count is set (or reset) to 1; each subsequent access increments this reference count.
 
-void LFU(std::vector<int>& pages_in){
+void VM::LFU(){
     unsigned int F = 3;
     int smallest = 0;
     std::cout << "Simulating LFU with fixed frame size of " << F << std::endl;
     std::vector<int> frame;
     std::vector<int>::iterator f_itr = pages_in.begin();
     std::vector<bool> page_fault;
+    int page_fault_counter = 0;
+    
     //when the frame is not full, we check if the page is in the frame and if not add it and print it
     while(frame.size() < F && f_itr != pages_in.end()){
         bool not_full = true;
         bool found_in_frame = in_frame(frame, f_itr);
         if(!found_in_frame){
             frame.push_back(*f_itr);
+            print_frame(frame,F,f_itr,smallest,not_full,found_in_frame,page_fault);
+            page_fault.push_back(true);
+            page_fault_counter++;
+            
+            
+        }else{
+            page_fault.push_back(false);
+            
         }
-        print_frame(frame,F,f_itr,smallest,not_full,found_in_frame,page_fault);
         f_itr++;
     }
     //when the frame is full go to the next incoming page and check if the page is in the frame
@@ -230,7 +279,7 @@ void LFU(std::vector<int>& pages_in){
             for(unsigned int i = 0; i < frame.size(); i++){
                 std::vector<int>::iterator tmp = pages_in.begin();
                 std::vector<bool>::iterator pf_itr = page_fault.begin();
-
+                
                 bool found_in_rest = false;
                 while(tmp!= f_itr){
                     if(frame[i] == *tmp && *pf_itr == false){
@@ -255,7 +304,7 @@ void LFU(std::vector<int>& pages_in){
             for(MAP::iterator m_iter = counters.begin(); m_iter != counters.end(); m_iter++ ){
                 collection.push_back(std::make_pair(m_iter->second,m_iter->first));
             }
-            std::sort(collection.begin(), collection.end(), sort_largest);
+            std::sort(collection.begin(), collection.end(), sort_largest_2);
             smallest = collection.begin()->second;
             for(unsigned int i = 0; i < frame.size(); i++){
                 if(frame[i] == smallest){
@@ -263,26 +312,18 @@ void LFU(std::vector<int>& pages_in){
                 }
             }
         }
-        print_frame(frame, F, f_itr, smallest, not_full, found_in_frame, page_fault);
+        if(!found_in_frame){
+            print_frame(frame,F,f_itr,smallest,not_full,found_in_frame,page_fault);
+            page_fault.push_back(true);
+            page_fault_counter++;
+            
+        }else{
+            page_fault.push_back(false);
+            
+        }
         f_itr++;
     }
+    std::cout << "End of LFU simulation ("<< page_fault_counter <<" page faults)"<< std::endl;
+    
 }
 
-
-int main(int argc, const char * argv[]) {
-    if(argc != 2){
-        std::cerr << "USAGE: "<< argv[0]<< "<input-file>" << std::endl;
-        return 1;
-    }
-    std::ifstream page_str(argv[1]);
-    if(!page_str){
-        std::cerr << "Can not open the page file " << argv[1] << std::endl;
-        return 1;
-    }
-    std::vector<int> pages_in;
-    read_pages(pages_in, page_str);
-    OPT(pages_in);
-    LRU(pages_in);
-    LFU(pages_in);
-
-}
